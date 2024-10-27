@@ -8,10 +8,23 @@ chai.use(chaiHttp);
 const mongoose = require('mongoose');
 const {boardSchema} = require('../routes/api');
 const boardModel = mongoose.model('boardModel', boardSchema);
+const api = require('../routes/api');
 
 suite('Functional Tests', function() {
     var brd
+
+    this.beforeAll(async function () {
+        const db = mongoose.connection.db;
+        const collections = await db.listCollections().toArray();
+        collections
+            .map((collection) => collection.name)
+            .forEach(async (collectionName) => {
+                db.dropCollection(collectionName);
+            });
+    });
+
     this.beforeEach(async function () {
+        
         brd = await boardModel.collection.findOne({name: 'general'});
     });
 
@@ -26,10 +39,13 @@ suite('Functional Tests', function() {
         .end(function (err, res) {
             assert.equal(err, null, 'should be no errors');
             assert.equal(res.status, 200);
-            assert.isNotNull(brd, 'board not found');
-            assert.isArray(brd.threads, 'threads must be an array');
-            assert.isObject(brd.threads[0], 'must be object');
-            done();
+            boardModel.collection.findOne({name: 'general'}).then(board => {
+                assert.isNotNull(board, 'board not found');
+                assert.isArray(board.threads, 'threads must be an array');
+                assert.isObject(board.threads[0], 'must be object');
+                assert.equal(board.threads[0].text, "Functional test 1", 'database must be correctly updated')
+                done();
+            });
         });
     });
 
