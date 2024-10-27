@@ -32,18 +32,17 @@ const replyModel = mongoose.model('replyModel', replySchema);
 const threadModel = mongoose.model('threadModel', threadSchema);
 const boardModel = mongoose.model('boardModel', boardSchema);
 module.exports = boardSchema;
-module.exports = threadSchema;
-module.exports = replySchema;
+
 
 module.exports = function (app) {
 
   app.route('/api/threads/:board')
     .get(function(req, res) {
       const board = req.params.board;
-      boardModel.findOne({name: board}).sort({ threads: -1 }).slice('threads', 10).then(brd => {
+      boardModel.findOne({name: board}).slice('threads', 10).then(brd => {
           if (brd) {
             if (brd.threads) {
-              res.json(brd.threads.map(thread => {
+              res.json(brd.threads.toReversed().map(thread => {
                 var {_id, text, created_on, bumped_on, replies } = thread;
                 if (replies.length > 3) {
                   var replies = replies.slice(-3).map(rep => ({
@@ -91,6 +90,9 @@ module.exports = function (app) {
           await newBoard.save();
         }
       });
+      while (!( await boardModel.exists({name: board}))) {
+        await delay(250);
+      }
       res.redirect(`/b/${board}/${newThread._id}`);
     })
     .put(function(req, res) {
@@ -228,3 +230,7 @@ module.exports = function (app) {
   });
 
 };
+
+function delay(time) {
+  return new Promise(resolve => setTimeout(resolve, time));
+}
